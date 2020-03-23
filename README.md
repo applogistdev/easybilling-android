@@ -17,18 +17,24 @@ dependencies {
 [https://developer.android.com/google/play/billing/billing_library_overview#acknowledge](https://developer.android.com/google/play/billing/billing_library_overview#acknowledge)
 ### Consume Example
 Candy Crush Buy Candy Bomb $1
+
 Purchase -> onPurchasesUpdated -> consumePurchase
+
 You can buy again
 ### Acknowledge Example
 Candy Crush Remove Ads $5
+
 Purchase -> onPurchasesUpdated -> acknowledgePurchase
+
 You can't buy again
 
 ## What is Developer Payload
 https://developer.android.com/google/play/billing/billing_library_overview#attach_a_developer_payload
 
 Some example: Developer Payload = User Email Address
+
 Candy Crush Buy Candy Bomb $1 OR Candy Crush Remove Ads $5
+
 Purchase -> onPurchasesUpdated -> consumePurchase(Developer Payload) OR acknowledgePurchase(Developer Payload)
 ```kotlin
 override fun onInAppPurchases(purchases: List<Purchase>) {  
@@ -82,7 +88,10 @@ billingViewModel.billingListener = object : EasyBillingListener {
     }  
 }
 ```
-
+## Payment
+```kotlin
+billingViewModel.purchase(Context, IN_APP_PRODUCT_ID)
+```
 ## Test Payments
 ```kotlin
 billingViewModel.testPurchased(Context)
@@ -101,7 +110,7 @@ override fun onBillingInitialized() {
             SkuDetailsResponseListener { billingResult, skuDetailsList ->  {
 	            Log.d("getSkuDetails", skuDetailsList[0].price)
             }
-  )
+  )  
 }
 or
 if(billingViewModel.isBillingReady()){
