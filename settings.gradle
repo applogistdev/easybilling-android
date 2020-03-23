@@ -1,0 +1,3 @@
+rootProject.name='EasyBilling'
+include ':app'
+include ':easybilling'
