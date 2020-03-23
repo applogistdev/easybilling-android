@@ -132,9 +132,12 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Consumes a given in-app product. Consuming can only be done on an item that's owned, and as a
      * result of consumption, the user will no longer own it.
      */
-    fun consumePurchase(purchaseToken: String) {
-        val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
-        playStoreBillingClient.consumeAsync(consumeParams) { _billingResult, _purchaseToken ->
+    fun consumePurchase(purchaseToken: String, developerPayload : String? = null) {
+        val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken)
+        if(developerPayload != null){
+            consumeParams.setDeveloperPayload(developerPayload)
+        }
+        playStoreBillingClient.consumeAsync(consumeParams.build()) { _billingResult, _purchaseToken ->
             billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
     }
@@ -165,7 +168,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
 
         if(!developerPayload.isNullOrEmpty()){
             params.setDeveloperPayload(developerPayload)
-        }
+    }
 
         playStoreBillingClient.acknowledgePurchase(params.build(), listener)
 
