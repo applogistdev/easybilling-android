@@ -8,7 +8,7 @@ import com.android.billingclient.api.Purchase
 *  Copyright © 2020 Mustafa Ürgüplüoğlu. All rights reserved.
 */
 
-interface BillingListener {
+interface EasyBillingListener {
     fun onBillingInitialized()
     fun onBillingInitializedError(errorCode: Int)
     /**

@@ -11,33 +11,33 @@ import com.android.billingclient.api.*
 *  Copyright © 2020 Mustafa Ürgüplüoğlu. All rights reserved.
 */
 
-class BillingViewModel(application: Application) : AndroidViewModel(application) {
+class EasyBillingViewModel(application: Application) : AndroidViewModel(application) {
 
-    var billingListener: BillingListener? = null
+    lateinit var billingListener: EasyBillingListener
 
     private var playStoreBillingClient: BillingClient = BillingClient.newBuilder(application)
         .enablePendingPurchases() // required or app will crash
-        .setListener { billingResult, purchases -> billingListener?.onPurchasesUpdated(billingResult, purchases) }
+        .setListener { billingResult, purchases -> billingListener.onPurchasesUpdated(billingResult, purchases) }
         .build()
 
     init {
         playStoreBillingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingServiceDisconnected() {
                 Log.d("BillingViewModel", "onBillingServiceDisconnected")
-                billingListener?.onBillingServiceDisconnected()
+                billingListener.onBillingServiceDisconnected()
             }
 
             override fun onBillingSetupFinished(billingResult: BillingResult) {
                 when (billingResult.responseCode) {
                     BillingClient.BillingResponseCode.OK -> {
-                        billingListener?.onBillingInitialized()
-                        billingListener?.onInAppPurchases(getPurchases(BillingClient.SkuType.INAPP))
-                        billingListener?.onSubsPurchases(getPurchases(BillingClient.SkuType.SUBS))
+                        billingListener.onBillingInitialized()
+                        billingListener.onInAppPurchases(getPurchases(BillingClient.SkuType.INAPP))
+                        billingListener.onSubsPurchases(getPurchases(BillingClient.SkuType.SUBS))
                     }
                     else -> {
                         //do nothing. Someone else will connect it through retry policy.
                         //May choose to send to server though
-                        billingListener?.onBillingInitializedError(billingResult.responseCode)
+                        billingListener.onBillingInitializedError(billingResult.responseCode)
                     }
                 }
             }
@@ -135,7 +135,7 @@ class BillingViewModel(application: Application) : AndroidViewModel(application)
     fun consumePurchase(purchaseToken: String) {
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
         playStoreBillingClient.consumeAsync(consumeParams) { _billingResult, _purchaseToken ->
-            billingListener?.onPurchaseConsumed(_billingResult, _purchaseToken)
+            billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
     }
 
@@ -147,7 +147,7 @@ class BillingViewModel(application: Application) : AndroidViewModel(application)
         val purchaseToken = "inapp:$packageName:android.test.purchased"
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
         playStoreBillingClient.consumeAsync(consumeParams) { _billingResult, _purchaseToken ->
-            billingListener?.onPurchaseConsumed(_billingResult, _purchaseToken)
+            billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
     }
 

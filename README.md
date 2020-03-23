@@ -3,12 +3,12 @@
 ```gradle  
 allprojects {
 	repositories {
-		...
-		maven { url 'https://jitpack.io' }
-	}
+        ...
+        maven { url 'https://jitpack.io' }
+    }
 }
   
 dependencies {
-	 implementation 'com.github.applogistdev:easybilling-android:lastVersion'
+    implementation 'com.github.applogistdev:easybilling-android:lastVersion'
 }
 ```  
