@@ -95,7 +95,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun getPurchases(@BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP): List<Purchase> {
         val result = playStoreBillingClient.queryPurchases(skuType)
-        return result.purchasesList
+        return result.purchasesList ?: listOf()
     }
 
     /**
@@ -110,15 +110,24 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
 
     /**
      * Initiate the billing flow for an in-app purchase or subscription.
+     * @param developerPayload If you pass this value,
+     * Google Play can use it to detect irregular activity, such as many devices making purchases
+     * on the same account in a short period of time. Do not use this field to store any Personally
+     * Identifiable Information (PII) such as emails in cleartext. Attempting to store PII in this
+     * field will result in purchases being blocked. Google Play recommends that you use either
+     * encryption or a one-way hash to generate an obfuscated identifier to send to Google Play.
      */
-    fun purchase(activity: Activity, productId: String, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP) {
+    fun purchase(activity: Activity, productId: String, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP, developerPayload : String? = null) {
         val params = SkuDetailsParams.newBuilder().setSkusList(arrayListOf(productId)).setType(skuType).build()
         playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    if (skuDetailsList.orEmpty().isNotEmpty()) {
-                        val purchaseParams = BillingFlowParams.newBuilder().setSkuDetails(skuDetailsList[0]).build()
-                        playStoreBillingClient.launchBillingFlow(activity, purchaseParams)
+                    if (!skuDetailsList.isNullOrEmpty()) {
+                        val purchaseParams = BillingFlowParams.newBuilder().setSkuDetails(skuDetailsList[0])
+                        if(!developerPayload.isNullOrEmpty()){
+                            purchaseParams.setObfuscatedAccountId(developerPayload)
+                        }
+                        playStoreBillingClient.launchBillingFlow(activity, purchaseParams.build())
                     }
                 }
                 else -> {
@@ -132,11 +141,8 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Consumes a given in-app product. Consuming can only be done on an item that's owned, and as a
      * result of consumption, the user will no longer own it.
      */
-    fun consumePurchase(purchaseToken: String, developerPayload : String? = null) {
+    fun consumePurchase(purchaseToken: String) {
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken)
-        if(developerPayload != null){
-            consumeParams.setDeveloperPayload(developerPayload)
-        }
         playStoreBillingClient.consumeAsync(consumeParams.build()) { _billingResult, _purchaseToken ->
             billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
@@ -163,15 +169,8 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     * For products that aren't consumed, use acknowledgePurchase(), found in the client API.
     */
     fun acknowledgePurchase(purchaseToken : String, listener : AcknowledgePurchaseResponseListener, developerPayload : String? = null){
-
         val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken)
-
-        if(!developerPayload.isNullOrEmpty()){
-            params.setDeveloperPayload(developerPayload)
-    }
-
         playStoreBillingClient.acknowledgePurchase(params.build(), listener)
-
     }
 
     override fun onCleared() {
