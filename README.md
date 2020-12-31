@@ -1,5 +1,5 @@
 
-## Installation [
+## Installation
 [![](https://jitpack.io/v/applogistdev/easybilling-android.svg)](https://jitpack.io/#applogistdev/easybilling-android)    
 ```gradle 
 allprojects {  
