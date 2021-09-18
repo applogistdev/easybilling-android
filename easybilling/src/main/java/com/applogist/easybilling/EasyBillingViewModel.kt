@@ -17,7 +17,12 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
 
     private var playStoreBillingClient: BillingClient = BillingClient.newBuilder(application)
         .enablePendingPurchases() // required or app will crash
-        .setListener { billingResult, purchases -> billingListener.onPurchasesUpdated(billingResult, purchases) }
+        .setListener { billingResult, purchases ->
+            billingListener.onPurchasesUpdated(
+                billingResult,
+                purchases
+            )
+        }
         .build()
 
     init {
@@ -31,8 +36,12 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
                 when (billingResult.responseCode) {
                     BillingClient.BillingResponseCode.OK -> {
                         billingListener.onBillingInitialized()
-                        billingListener.onInAppPurchases(getPurchases(BillingClient.SkuType.INAPP))
-                        billingListener.onSubsPurchases(getPurchases(BillingClient.SkuType.SUBS))
+                        getPurchases(BillingClient.SkuType.INAPP) { p0, p1 ->
+                            billingListener.onInAppPurchases(p1)
+                        }
+                        getPurchases(BillingClient.SkuType.SUBS) { p0, p1 ->
+                            billingListener.onSubsPurchases(p1)
+                        }
                     }
                     else -> {
                         //do nothing. Someone else will connect it through retry policy.
@@ -48,7 +57,8 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Checks if the user's device supports subscriptions
      */
     fun isSubscriptionSupported(): Boolean {
-        val billingResult = playStoreBillingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
+        val billingResult =
+            playStoreBillingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS)
         return billingResult.responseCode == BillingClient.BillingResponseCode.OK
     }
 
@@ -66,7 +76,10 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * The response includes a JSON string, which contains fake purchase information
      * (for example, a fake order ID).
      */
-    fun testPurchased(activity: Activity, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP) {
+    fun testPurchased(
+        activity: Activity,
+        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+    ) {
         purchase(activity, "android.test.purchased", skuType)
     }
 
@@ -76,7 +89,10 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * This can occur when an error is encountered in the order process,
      * such as an invalid credit card, or when you cancel a user's order before it is charged.
      */
-    fun testPurchaseCanceled(activity: Activity, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP) {
+    fun testPurchaseCanceled(
+        activity: Activity,
+        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+    ) {
         purchase(activity, "android.test.canceled", skuType)
     }
 
@@ -85,7 +101,10 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Google Play responds as though the item being purchased
      * was not listed in your application's product list.
      */
-    fun testPurchaseItemUnavailable(activity: Activity, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP) {
+    fun testPurchaseItemUnavailable(
+        activity: Activity,
+        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+    ) {
         purchase(activity, "android.test.item_unavailable", skuType)
     }
 
@@ -93,15 +112,21 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Get purchases details for all the items bought within your app. This method uses a cache of
      * Google Play Store app without initiating a network request.
      */
-    fun getPurchases(@BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP): List<Purchase> {
-        val result = playStoreBillingClient.queryPurchases(skuType)
-        return result.purchasesList ?: listOf()
+    fun getPurchases(
+        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP,
+        listener: PurchasesResponseListener
+    ) {
+        playStoreBillingClient.queryPurchasesAsync(skuType, listener)
     }
 
     /**
      * Perform a network query to get SKU details and return the result asynchronously.
      */
-    fun getSkuDetails(skuList: List<String>, @BillingClient.SkuType skuType: String, skuDetailsResponseListener: SkuDetailsResponseListener) {
+    fun getSkuDetails(
+        skuList: List<String>,
+        @BillingClient.SkuType skuType: String,
+        skuDetailsResponseListener: SkuDetailsResponseListener
+    ) {
         val params = SkuDetailsParams.newBuilder().setSkusList(skuList).setType(skuType).build()
         playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
             skuDetailsResponseListener.onSkuDetailsResponse(billingResult, skuDetailsList!!)
@@ -117,14 +142,22 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * field will result in purchases being blocked. Google Play recommends that you use either
      * encryption or a one-way hash to generate an obfuscated identifier to send to Google Play.
      */
-    fun purchase(activity: Activity, productId: String, @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP, developerPayload : String? = null) {
-        val params = SkuDetailsParams.newBuilder().setSkusList(arrayListOf(productId)).setType(skuType).build()
+    fun purchase(
+        activity: Activity,
+        productId: String,
+        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP,
+        developerPayload: String? = null
+    ) {
+        val params =
+            SkuDetailsParams.newBuilder().setSkusList(arrayListOf(productId)).setType(skuType)
+                .build()
         playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
                     if (!skuDetailsList.isNullOrEmpty()) {
-                        val purchaseParams = BillingFlowParams.newBuilder().setSkuDetails(skuDetailsList[0])
-                        if(!developerPayload.isNullOrEmpty()){
+                        val purchaseParams =
+                            BillingFlowParams.newBuilder().setSkuDetails(skuDetailsList[0])
+                        if (!developerPayload.isNullOrEmpty()) {
                             purchaseParams.setObfuscatedAccountId(developerPayload)
                         }
                         playStoreBillingClient.launchBillingFlow(activity, purchaseParams.build())
@@ -152,7 +185,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Consumes a test in-app product. Consuming can only be done on an item that's owned, and as a
      * result of consumption, the user will no longer own it.
      */
-    fun consumeTestPurchase(packageName : String) {
+    fun consumeTestPurchase(packageName: String) {
         val purchaseToken = "inapp:$packageName:android.test.purchased"
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
         playStoreBillingClient.consumeAsync(consumeParams) { _billingResult, _purchaseToken ->
@@ -168,7 +201,11 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     * if the purchase has already been acknowledged.
     * For products that aren't consumed, use acknowledgePurchase(), found in the client API.
     */
-    fun acknowledgePurchase(purchaseToken : String, listener : AcknowledgePurchaseResponseListener, developerPayload : String? = null){
+    fun acknowledgePurchase(
+        purchaseToken: String,
+        listener: AcknowledgePurchaseResponseListener,
+        developerPayload: String? = null
+    ) {
         val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken)
         playStoreBillingClient.acknowledgePurchase(params.build(), listener)
     }

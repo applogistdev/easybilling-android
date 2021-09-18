@@ -11,6 +11,7 @@ import com.android.billingclient.api.Purchase
 interface EasyBillingListener {
     fun onBillingInitialized()
     fun onBillingInitializedError(errorCode: Int)
+
     /**
      * This method is called by the [playStoreBillingClient] when new purchases are detected.
      * The purchase list in this method is not the same as the one in
