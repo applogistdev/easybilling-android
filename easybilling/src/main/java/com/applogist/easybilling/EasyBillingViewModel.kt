@@ -129,7 +129,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     ) {
         val params = SkuDetailsParams.newBuilder().setSkusList(skuList).setType(skuType).build()
         playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            skuDetailsResponseListener.onSkuDetailsResponse(billingResult, skuDetailsList!!)
+            skuDetailsResponseListener.onSkuDetailsResponse(billingResult, skuDetailsList)
         }
     }
 
