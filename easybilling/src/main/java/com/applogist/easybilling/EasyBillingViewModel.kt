@@ -15,17 +15,19 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
 
     lateinit var billingListener: EasyBillingListener
 
-    private var playStoreBillingClient: BillingClient = BillingClient.newBuilder(application)
-        .enablePendingPurchases() // required or app will crash
-        .setListener { billingResult, purchases ->
-            billingListener.onPurchasesUpdated(
-                billingResult,
-                purchases
-            )
-        }
-        .build()
+    private lateinit var playStoreBillingClient: BillingClient
 
-    init {
+    fun init() {
+        playStoreBillingClient = BillingClient.newBuilder(getApplication())
+            .enablePendingPurchases() // required or app will crash
+            .setListener { billingResult, purchases ->
+                billingListener.onPurchasesUpdated(
+                    billingResult,
+                    purchases
+                )
+            }
+            .build()
+
         playStoreBillingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingServiceDisconnected() {
                 Log.d("BillingViewModel", "onBillingServiceDisconnected")
