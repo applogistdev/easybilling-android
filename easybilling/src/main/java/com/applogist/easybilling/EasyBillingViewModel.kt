@@ -38,10 +38,18 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
                 when (billingResult.responseCode) {
                     BillingClient.BillingResponseCode.OK -> {
                         billingListener.onBillingInitialized()
-                        getPurchases(BillingClient.SkuType.INAPP) { p0, p1 ->
+                        getPurchases(
+                            QueryPurchasesParams.newBuilder()
+                                .setProductType(BillingClient.ProductType.INAPP)
+                                .build()
+                        ) { p0, p1 ->
                             billingListener.onInAppPurchases(p1)
                         }
-                        getPurchases(BillingClient.SkuType.SUBS) { p0, p1 ->
+                        getPurchases(
+                            QueryPurchasesParams.newBuilder()
+                                .setProductType(BillingClient.ProductType.SUBS)
+                                .build()
+                        ) { p0, p1 ->
                             billingListener.onSubsPurchases(p1)
                         }
                     }
@@ -80,9 +88,9 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun testPurchased(
         activity: Activity,
-        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+        @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.purchased", skuType)
+        purchase(activity, "android.test.purchased", productType)
     }
 
     /**
@@ -93,9 +101,9 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun testPurchaseCanceled(
         activity: Activity,
-        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+        @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.canceled", skuType)
+        purchase(activity, "android.test.canceled", productType)
     }
 
     /**
@@ -105,9 +113,9 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun testPurchaseItemUnavailable(
         activity: Activity,
-        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP
+        @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.item_unavailable", skuType)
+        purchase(activity, "android.test.item_unavailable", productType)
     }
 
     /**
@@ -115,23 +123,26 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * Google Play Store app without initiating a network request.
      */
     fun getPurchases(
-        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP,
+        queryPurchasesParams: QueryPurchasesParams = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build(),
         listener: PurchasesResponseListener
     ) {
-        playStoreBillingClient.queryPurchasesAsync(skuType, listener)
+        playStoreBillingClient.queryPurchasesAsync(queryPurchasesParams, listener)
     }
 
     /**
-     * Perform a network query to get SKU details and return the result asynchronously.
+     * Perform a network query to get Product details and return the result asynchronously.
      */
-    fun getSkuDetails(
-        skuList: List<String>,
-        @BillingClient.SkuType skuType: String,
-        skuDetailsResponseListener: SkuDetailsResponseListener
+    fun getProductDetails(
+        productList: List<QueryProductDetailsParams.Product>,
+        productDetailsResponseListener: ProductDetailsResponseListener
     ) {
-        val params = SkuDetailsParams.newBuilder().setSkusList(skuList).setType(skuType).build()
-        playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
-            skuDetailsResponseListener.onSkuDetailsResponse(billingResult, skuDetailsList)
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(productList)
+            .build()
+        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, skuDetailsList ->
+            productDetailsResponseListener.onProductDetailsResponse(billingResult, skuDetailsList)
         }
     }
 
@@ -147,18 +158,31 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     fun purchase(
         activity: Activity,
         productId: String,
-        @BillingClient.SkuType skuType: String = BillingClient.SkuType.INAPP,
+        @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP,
         developerPayload: String? = null
     ) {
-        val params =
-            SkuDetailsParams.newBuilder().setSkusList(arrayListOf(productId)).setType(skuType)
-                .build()
-        playStoreBillingClient.querySkuDetailsAsync(params) { billingResult, skuDetailsList ->
+
+        val product = QueryProductDetailsParams.Product.newBuilder()
+            .setProductId(productId)
+            .setProductType(productType)
+            .build()
+
+        val params = QueryProductDetailsParams.newBuilder()
+            .setProductList(listOf(product))
+            .build()
+
+        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, skuDetailsList ->
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    if (!skuDetailsList.isNullOrEmpty()) {
-                        val purchaseParams =
-                            BillingFlowParams.newBuilder().setSkuDetails(skuDetailsList[0])
+                    if (skuDetailsList.isNotEmpty()) {
+                        val productDetailsParamsList =
+                            listOf(
+                                BillingFlowParams.ProductDetailsParams.newBuilder()
+                                    .setProductDetails(skuDetailsList.first())
+                                    .build()
+                            )
+                        val purchaseParams = BillingFlowParams.newBuilder()
+                            .setProductDetailsParamsList(productDetailsParamsList)
                         if (!developerPayload.isNullOrEmpty()) {
                             purchaseParams.setObfuscatedAccountId(developerPayload)
                         }
@@ -205,8 +229,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     */
     fun acknowledgePurchase(
         purchaseToken: String,
-        listener: AcknowledgePurchaseResponseListener,
-        developerPayload: String? = null
+        listener: AcknowledgePurchaseResponseListener
     ) {
         val params = AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchaseToken)
         playStoreBillingClient.acknowledgePurchase(params.build(), listener)
