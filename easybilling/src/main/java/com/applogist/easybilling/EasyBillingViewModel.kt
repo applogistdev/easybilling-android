@@ -90,7 +90,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         activity: Activity,
         @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.purchased", productType)
+        purchaseWithQuery(activity, "android.test.purchased", productType)
     }
 
     /**
@@ -103,7 +103,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         activity: Activity,
         @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.canceled", productType)
+        purchaseWithQuery(activity, "android.test.canceled", productType)
     }
 
     /**
@@ -115,7 +115,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         activity: Activity,
         @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP
     ) {
-        purchase(activity, "android.test.item_unavailable", productType)
+        purchaseWithQuery(activity, "android.test.item_unavailable", productType)
     }
 
     /**
@@ -155,7 +155,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
      * field will result in purchases being blocked. Google Play recommends that you use either
      * encryption or a one-way hash to generate an obfuscated identifier to send to Google Play.
      */
-    fun purchase(
+    fun purchaseWithQuery(
         activity: Activity,
         productId: String,
         @BillingClient.ProductType productType: String = BillingClient.ProductType.INAPP,
@@ -171,14 +171,18 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
             .setProductList(listOf(product))
             .build()
 
-        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, skuDetailsList ->
+        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, productDetails ->
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    if (skuDetailsList.isNotEmpty()) {
+                    if (productDetails.isNotEmpty()) {
+                        val offerToken =
+                            productDetails.firstOrNull()?.subscriptionOfferDetails?.firstOrNull()?.offerToken
+                                ?: ""
                         val productDetailsParamsList =
                             listOf(
                                 BillingFlowParams.ProductDetailsParams.newBuilder()
-                                    .setProductDetails(skuDetailsList.first())
+                                    .setProductDetails(productDetails.first())
+                                    .setOfferToken(offerToken)
                                     .build()
                             )
                         val purchaseParams = BillingFlowParams.newBuilder()
@@ -194,6 +198,27 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
         }
+    }
+
+    fun purchase(
+        activity: Activity,
+        productDetails: ProductDetails,
+        developerPayload: String? = null
+    ) {
+        val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: ""
+        val productDetailsParamsList =
+            listOf(
+                BillingFlowParams.ProductDetailsParams.newBuilder()
+                    .setProductDetails(productDetails)
+                    .setOfferToken(offerToken)
+                    .build()
+            )
+        val purchaseParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(productDetailsParamsList)
+        if (!developerPayload.isNullOrEmpty()) {
+            purchaseParams.setObfuscatedAccountId(developerPayload)
+        }
+        playStoreBillingClient.launchBillingFlow(activity, purchaseParams.build())
     }
 
     /*
