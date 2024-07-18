@@ -57,7 +57,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.applogistdev'
                 artifactId = 'easybilling-android'
-                version = '3.0.2'
+                version = '3.0.1'
             }
         }
     }
