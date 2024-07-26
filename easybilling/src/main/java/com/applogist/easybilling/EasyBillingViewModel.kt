@@ -13,7 +13,7 @@ import com.android.billingclient.api.*
 
 class EasyBillingViewModel(application: Application) : AndroidViewModel(application) {
 
-    lateinit var billingListener: EasyBillingListener
+    var billingListener: EasyBillingListener?=null
 
     private lateinit var playStoreBillingClient: BillingClient
 
@@ -21,7 +21,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         playStoreBillingClient = BillingClient.newBuilder(getApplication())
             .enablePendingPurchases() // required or app will crash
             .setListener { billingResult, purchases ->
-                billingListener.onPurchasesUpdated(
+                billingListener?.onPurchasesUpdated(
                     billingResult,
                     purchases
                 )
@@ -31,32 +31,32 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         playStoreBillingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingServiceDisconnected() {
                 Log.d("BillingViewModel", "onBillingServiceDisconnected")
-                billingListener.onBillingServiceDisconnected()
+                billingListener?.onBillingServiceDisconnected()
             }
 
             override fun onBillingSetupFinished(billingResult: BillingResult) {
                 when (billingResult.responseCode) {
                     BillingClient.BillingResponseCode.OK -> {
-                        billingListener.onBillingInitialized()
+                        billingListener?.onBillingInitialized()
                         getPurchases(
                             QueryPurchasesParams.newBuilder()
                                 .setProductType(BillingClient.ProductType.INAPP)
                                 .build()
                         ) { p0, p1 ->
-                            billingListener.onInAppPurchases(p1)
+                            billingListener?.onInAppPurchases(p1)
                         }
                         getPurchases(
                             QueryPurchasesParams.newBuilder()
                                 .setProductType(BillingClient.ProductType.SUBS)
                                 .build()
                         ) { p0, p1 ->
-                            billingListener.onSubsPurchases(p1)
+                            billingListener?.onSubsPurchases(p1)
                         }
                     }
                     else -> {
                         //do nothing. Someone else will connect it through retry policy.
                         //May choose to send to server though
-                        billingListener.onBillingInitializedError(billingResult.responseCode)
+                        billingListener?.onBillingInitializedError(billingResult.responseCode)
                     }
                 }
             }
@@ -228,7 +228,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
     fun consumePurchase(purchaseToken: String) {
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken)
         playStoreBillingClient.consumeAsync(consumeParams.build()) { _billingResult, _purchaseToken ->
-            billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
+            billingListener?.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
     }
 
@@ -240,7 +240,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         val purchaseToken = "inapp:$packageName:android.test.purchased"
         val consumeParams = ConsumeParams.newBuilder().setPurchaseToken(purchaseToken).build()
         playStoreBillingClient.consumeAsync(consumeParams) { _billingResult, _purchaseToken ->
-            billingListener.onPurchaseConsumed(_billingResult, _purchaseToken)
+            billingListener?.onPurchaseConsumed(_billingResult, _purchaseToken)
         }
     }
 
