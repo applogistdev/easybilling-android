@@ -19,14 +19,16 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
 
     fun init() {
         playStoreBillingClient = BillingClient.newBuilder(getApplication())
-            .enablePendingPurchases() // required or app will crash
             .setListener { billingResult, purchases ->
-                billingListener?.onPurchasesUpdated(
-                    billingResult,
-                    purchases
-                )
+                billingListener?.onPurchasesUpdated(billingResult, purchases)
             }
+            .enablePendingPurchases(
+                PendingPurchasesParams.newBuilder()
+                    .enableOneTimeProducts()
+                    .build()
+            )
             .build()
+
 
         playStoreBillingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingServiceDisconnected() {
@@ -170,18 +172,18 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(listOf(product))
             .build()
-
-        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, productDetails ->
+        playStoreBillingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
             when (billingResult.responseCode) {
                 BillingClient.BillingResponseCode.OK -> {
-                    if (productDetails.isNotEmpty()) {
-                        val offerToken =
-                            productDetails.firstOrNull()?.subscriptionOfferDetails?.firstOrNull()?.offerToken
-                                ?: ""
+                    // Eğer parametre nullable ise: productDetailsList?.isNotEmpty() kullan
+                    if (productDetailsList != null && productDetailsList.productDetailsList.isNotEmpty()) {
+                        // İlk ProductDetails'i al
+                        val pd = productDetailsList.productDetailsList.first() // veya firstOrNull() ile güvenle al
+                        val offerToken = pd.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: ""
                         val productDetailsParamsList =
                             listOf(
                                 BillingFlowParams.ProductDetailsParams.newBuilder()
-                                    .setProductDetails(productDetails.first())
+                                    .setProductDetails(pd)
                                     .setOfferToken(offerToken)
                                     .build()
                             )
@@ -191,6 +193,8 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
                             purchaseParams.setObfuscatedAccountId(developerPayload)
                         }
                         playStoreBillingClient.launchBillingFlow(activity, purchaseParams.build())
+                    } else {
+                        Log.e("BillingViewModel", "Product details list empty")
                     }
                 }
                 else -> {
@@ -198,6 +202,7 @@ class EasyBillingViewModel(application: Application) : AndroidViewModel(applicat
                 }
             }
         }
+
     }
 
     fun purchase(

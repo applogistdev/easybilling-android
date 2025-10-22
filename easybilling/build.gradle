@@ -12,7 +12,7 @@ repositories {
 }
 
 group = 'com.github.applogistdev'
-version = '6.2.0'
+version = '6.2.1'
 
 android {
     compileSdk 33
@@ -46,7 +46,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.core:core-ktx:1.9.0'
 
-    api 'com.android.billingclient:billing:5.1.0'
+    api 'com.android.billingclient:billing:8.0.0'
 }
 
 afterEvaluate {
@@ -57,7 +57,7 @@ afterEvaluate {
                 from components.release
                 groupId = 'com.github.applogistdev'
                 artifactId = 'easybilling-android'
-                version = '3.0.2'
+                version = '3.0.3'
             }
         }
     }
